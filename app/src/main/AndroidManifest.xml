@@ -43,7 +43,8 @@
             android:name=".PortraitCaptureActivity"
             android:screenOrientation="portrait"
             android:theme="@style/Theme.AppCompat.Light.NoActionBar"/>
-
+        <meta-data android:name="com.amap.api.v2.apikey" android:value="cf8ed19c6174e2d631f233c3a4172df4">
+        </meta-data>
     </application>
 
 </manifest>
