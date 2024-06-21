@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+            xmlns:app="http://schemas.android.com/apk/res-auto"
+            xmlns:tools="http://schemas.android.com/tools"
+            app:startDestination="@id/navigation_ride">
+
+    <fragment
+            android:id="@+id/navigation_ride"
+            android:name="com.example.sharedbikeclient.ui.ride.RideFragment"
+            android:label="骑行"
+            tools:layout="@layout/fragment_ride" />
+    <fragment
+            android:id="@+id/navigation_charity"
+            android:name="com.example.sharedbikeclient.ui.charity.CharityFragment"
+            android:label="公益捐赠"
+            tools:layout="@layout/fragment_charity" />
+</navigation>
