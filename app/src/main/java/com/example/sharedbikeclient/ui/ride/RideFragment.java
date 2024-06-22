@@ -306,7 +306,7 @@ public class RideFragment extends Fragment {
         initBikes();
         addBikeMarkers();
         initMyLocation();
-
+        initLegalArea();
         drawLegalArea();
 
         try {
