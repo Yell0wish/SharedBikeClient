@@ -1,3 +1,11 @@
 <resources>
     <string name="app_name">SharedBikeClient</string>
+    <string-array name="fault_parts">
+        <item>车座</item>
+        <item>车轮</item>
+        <item>车筐</item>
+        <item>刹车</item>
+    </string-array>
+
 </resources>
+

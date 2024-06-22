@@ -13,12 +13,11 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.BLUETOOTH" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN" tools:targetApi="31" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" tools:targetApi="31" />
-
+    <uses-permission android:name="android.permission.CAMERA" />
 
     <application
         android:allowBackup="true"
@@ -29,6 +28,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.SharedBikeClient"
+        android:networkSecurityConfig="@xml/network_security_config"
         tools:targetApi="31">
         <activity
             android:name=".MainActivity"
@@ -45,6 +45,15 @@
             android:theme="@style/Theme.AppCompat.Light.NoActionBar"/>
         <meta-data android:name="com.amap.api.v2.apikey" android:value="cf8ed19c6174e2d631f233c3a4172df4">
         </meta-data>
+        <provider
+                android:name="androidx.core.content.FileProvider"
+                android:authorities="com.example.sharedbikeclient.fileprovider"
+                android:exported="false"
+                android:grantUriPermissions="true">
+            <meta-data
+                    android:name="android.support.FILE_PROVIDER_PATHS"
+                    android:resource="@xml/file_paths" />
+        </provider>
     </application>
 
 </manifest>

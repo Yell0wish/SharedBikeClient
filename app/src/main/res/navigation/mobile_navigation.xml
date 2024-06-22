@@ -8,10 +8,11 @@
             android:id="@+id/navigation_ride"
             android:name="com.example.sharedbikeclient.ui.ride.RideFragment"
             android:label="骑行"
+            android:icon="@drawable/location_marker"
             tools:layout="@layout/fragment_ride" />
     <fragment
             android:id="@+id/navigation_charity"
             android:name="com.example.sharedbikeclient.ui.charity.CharityFragment"
-            android:label="公益捐赠"
-            tools:layout="@layout/fragment_charity" />
+            android:label="公益寻人"
+            tools:layout="@layout/activity_charity" />
 </navigation>

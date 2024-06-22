@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:orientation="vertical"
+              android:padding="16dp"
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content">
+
+    <Button
+            android:id="@+id/btn_take_photo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="拍摄故障部位的照片" />
+
+    <EditText
+            android:id="@+id/edit_fault_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="故障标题" />
+
+    <EditText
+            android:id="@+id/edit_fault_description"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="故障描述" />
+
+    <Spinner
+            android:id="@+id/spinner_fault_part"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:entries="@array/fault_parts" />
+
+</LinearLayout>

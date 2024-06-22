@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:layout_width="match_parent"
+              android:layout_height="match_parent"
+              android:orientation="vertical"
+              android:padding="16dp">
+    <ImageView
+            android:id="@+id/imageView"
+            android:layout_width="match_parent"
+            android:layout_height="400dp"
+            android:scaleType="centerCrop"
+            android:src="@drawable/ic_launcher_foreground" />
+
+    <TextView
+            android:id="@+id/textName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="姓名"
+            android:textSize="18sp"
+            android:paddingTop="8dp" />
+
+    <TextView
+            android:id="@+id/textGender"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="性别"
+            android:paddingTop="4dp" />
+
+    <TextView
+            android:id="@+id/textBirthdate"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="出生日期"
+            android:paddingTop="4dp" />
+
+    <TextView
+            android:id="@+id/textHeight"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="失踪时身高"
+            android:paddingTop="4dp" />
+
+    <TextView
+            android:id="@+id/textMissingDate"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="失踪时间"
+            android:paddingTop="4dp" />
+
+    <TextView
+            android:id="@+id/textMissingLocation"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="失踪地点"
+            android:paddingTop="4dp" />
+
+    <TextView
+            android:id="@+id/textDescription"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="失踪者特征描述"
+            android:paddingTop="4dp" />
+</LinearLayout>

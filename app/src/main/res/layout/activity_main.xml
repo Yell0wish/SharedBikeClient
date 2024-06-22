@@ -14,33 +14,6 @@
             tools:layout_editor_absoluteY="67dp"
             tools:layout_editor_absoluteX="0dp"/>
 
-    <TextView
-            android:id="@+id/textView"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            app:layout_constraintBottom_toTopOf="@+id/scan_button"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"/>
-
-    <Button
-            android:id="@+id/scan_button"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="扫码骑行"
-            app:layout_constraintTop_toBottomOf="@+id/textView"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"/>
-
-    <Button
-            android:id="@+id/disconnect_button"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="结束骑行"
-            app:layout_constraintTop_toBottomOf="@+id/scan_button"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"/>
-
     <fragment
             android:id="@+id/nav_host_fragment"
             android:name="androidx.navigation.fragment.NavHostFragment"

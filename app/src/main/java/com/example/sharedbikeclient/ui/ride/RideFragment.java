@@ -5,6 +5,8 @@ import android.app.AlertDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
+import android.content.ContentResolver;
+import android.content.ContentValues;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
@@ -22,6 +24,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.content.FileProvider;
 import androidx.fragment.app.Fragment;
 import com.amap.api.location.AMapLocation;
 import com.amap.api.location.AMapLocationClient;
@@ -30,25 +33,62 @@ import com.amap.api.location.AMapLocationListener;
 import com.amap.api.maps2d.AMap;
 import com.amap.api.maps2d.MapView;
 import com.amap.api.maps2d.model.*;
+import com.android.volley.Request;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.Volley;
 import com.example.sharedbikeclient.Bike;
 import com.example.sharedbikeclient.PortraitCaptureActivity;
 import com.example.sharedbikeclient.R;
+import com.example.sharedbikeclient.network.ApiService;
+import com.example.sharedbikeclient.network.UploadResponse;
 import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
+
+import java.io.*;
+import java.text.SimpleDateFormat;
+import java.util.*;
+
+import android.app.AlertDialog;
+import android.content.Intent;
+import android.graphics.Bitmap;
+import android.net.Uri;
+import android.os.Environment;
+import android.provider.MediaStore;
+import android.view.View;
+import android.widget.EditText;
+import android.widget.Spinner;
+import okhttp3.*;
+import org.json.JSONException;
+import org.json.JSONObject;
+import retrofit2.Call;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
+
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import okhttp3.MediaType;
+import okhttp3.MultipartBody;
+import okhttp3.RequestBody;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
+import com.amap.api.maps2d.AMapUtils;
+import com.amap.api.maps2d.model.LatLng;
 
 public class RideFragment extends Fragment {
+
+    private static final int REQUEST_IMAGE_CAPTURE = 1;
+    private Uri photoURI;
+    private String imageUrl;
 
     private static final int REQUEST_LOCATION_PERMISSION = 1;
     private static final int REQUEST_BLUETOOTH_PERMISSION = 2;
     private static final int REQUEST_ENABLE_BLUETOOTH = 3;
     private static final int REQUEST_BLUETOOTH_CONNECT_PERMISSION = 4;
 
+    private List<LatLng> ridePathPoints = new ArrayList<>();
+    private float totalDistance = 0.0f;
 
     private String scannedData;
     private BluetoothAdapter bluetoothAdapter;
@@ -76,6 +116,165 @@ public class RideFragment extends Fragment {
         // Required empty public constructor
     }
 
+    private void showRepairDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
+        View view = getLayoutInflater().inflate(R.layout.dialog_repair, null);
+        builder.setView(view);
+
+        EditText editFaultTitle = view.findViewById(R.id.edit_fault_title);
+        EditText editFaultDescription = view.findViewById(R.id.edit_fault_description);
+        Spinner spinnerFaultPart = view.findViewById(R.id.spinner_fault_part);
+        Button btnTakePhoto = view.findViewById(R.id.btn_take_photo);
+
+        btnTakePhoto.setOnClickListener(v -> {
+            Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+            if (takePictureIntent.resolveActivity(getActivity().getPackageManager()) != null) {
+                Uri photoUri = createImageUri();
+                if (photoUri != null) {
+                    photoURI = photoUri;
+                    takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI);
+                    startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE);
+                }
+            }
+        });
+
+        builder.setPositiveButton("提交", (dialog, which) -> {
+            String faultTitle = editFaultTitle.getText().toString();
+            String faultDescription = editFaultDescription.getText().toString();
+            String faultPart = spinnerFaultPart.getSelectedItem().toString();
+
+            // 上传图片并获取 URL
+            uploadImageAndSendRepair(faultTitle, faultDescription, faultPart);
+        });
+
+        builder.setNegativeButton("取消", (dialog, which) -> dialog.dismiss());
+
+        builder.create().show();
+    }
+
+    private Uri createImageUri() {
+        ContentResolver resolver = getContext().getContentResolver();
+        ContentValues contentValues = new ContentValues();
+        contentValues.put(MediaStore.MediaColumns.DISPLAY_NAME, "IMG_" + System.currentTimeMillis());
+        contentValues.put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg");
+        contentValues.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_PICTURES);
+        return resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues);
+    }
+
+    private void uploadImage(Uri uri) {
+        try {
+            InputStream inputStream = getContext().getContentResolver().openInputStream(uri);
+            byte[] buffer = new byte[inputStream.available()];
+            inputStream.read(buffer);
+            File file = new File(getContext().getCacheDir(), "temp_image.jpg");
+            FileOutputStream outStream = new FileOutputStream(file);
+            outStream.write(buffer);
+
+            RequestBody requestBody = RequestBody.create(MediaType.parse("image/*"), file);
+            MultipartBody.Part body = MultipartBody.Part.createFormData("file", file.getName(), requestBody);
+
+            Retrofit retrofit = new Retrofit.Builder()
+                    .baseUrl("http://192.168.1.172:5000/")  // 基础 URL 必须以 / 结尾
+                    .addConverterFactory(GsonConverterFactory.create())
+                    .build();
+
+            ApiService apiService = retrofit.create(ApiService.class);
+            Call<UploadResponse> call = apiService.uploadImage(body);
+
+            call.enqueue(new Callback<UploadResponse>() {
+                @Override
+                public void onResponse(Call<UploadResponse> call, Response<UploadResponse> response) {
+                    if (response.isSuccessful()) {
+                        imageUrl = response.body().getImageUrl();
+                        Toast.makeText(getContext(), "图片上传成功", Toast.LENGTH_SHORT).show();
+                    } else {
+                        Toast.makeText(getContext(), "图片上传成功", Toast.LENGTH_SHORT).show();
+                        Log.e(TAG, "图片上传失败: " + response.errorBody().toString());
+                    }
+                }
+
+                @Override
+                public void onFailure(Call<UploadResponse> call, Throwable t) {
+                    Toast.makeText(getContext(), "图片上传失败", Toast.LENGTH_SHORT).show();
+                    Log.e(TAG, "图片上传失败: " + t.getMessage(), t);
+                }
+            });
+        } catch (IOException e) {
+            Log.e(TAG, "读取文件时发生错误: " + e.getMessage(), e);
+        }
+    }
+
+
+    private void uploadImageAndSendRepair(String faultTitle, String faultDescription, String faultPart) {
+        if (imageUrl != null) {
+            // 创建 JSON 对象
+            JSONObject repairData = new JSONObject();
+            try {
+                repairData.put("description", faultTitle);
+                repairData.put("details", faultDescription);
+                repairData.put("faultPart", faultPart);
+                repairData.put("imageUrl", imageUrl);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+
+            // 发送 HTTP 请求
+            String url = "http://your-server-url.com/repair";
+            JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.POST, url, repairData,
+                    response -> {
+                        // 处理响应
+                        Toast.makeText(getContext(), "报修成功", Toast.LENGTH_SHORT).show();
+                    },
+                    error -> {
+                        // 处理错误
+                        Toast.makeText(getContext(), "报修失败", Toast.LENGTH_SHORT).show();
+                    });
+
+            // 添加请求到请求队列
+            Volley.newRequestQueue(getContext()).add(jsonObjectRequest);
+        } else {
+            Toast.makeText(getContext(), "请先拍摄故障部位的照片", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void initLegalArea() {
+        legalAreaPoints.add(new LatLng(39.950, 116.340));
+        legalAreaPoints.add(new LatLng(39.950, 116.350));
+        legalAreaPoints.add(new LatLng(39.960, 116.350));
+        legalAreaPoints.add(new LatLng(39.960, 116.340));
+    }
+
+    private boolean isLocationInLegalArea(LatLng point) {
+        int intersectCount = 0;
+        for (int i = 0; i < legalAreaPoints.size() - 1; i++) {
+            if (rayCastIntersect(point, legalAreaPoints.get(i), legalAreaPoints.get(i + 1))) {
+                intersectCount++;
+            }
+        }
+        // 处理最后一个顶点和第一个顶点之间的边
+        if (rayCastIntersect(point, legalAreaPoints.get(legalAreaPoints.size() - 1), legalAreaPoints.get(0))) {
+            intersectCount++;
+        }
+        return (intersectCount % 2) == 1; // odd = inside, even = outside
+    }
+
+    private boolean rayCastIntersect(LatLng point, LatLng vertA, LatLng vertB) {
+        double aY = vertA.latitude;
+        double bY = vertB.latitude;
+        double aX = vertA.longitude;
+        double bX = vertB.longitude;
+        double pY = point.latitude;
+        double pX = point.longitude;
+
+        if ((aY > pY && bY > pY) || (aY < pY && bY < pY) || (aX < pX && bX < pX)) {
+            return false; // a and b can't both be above or below the point
+        }
+        double m = (aY - bY) / (aX - bX); // Slope of the line
+        double bee = (-aX) * m + aY; // y-intercept of line
+        double x = (pY - bee) / m; // Solve for x when y is pY
+        return x > pX;
+    }
+
 
     private void drawLegalArea() {
         // 添加合法区域的坐标点
@@ -92,15 +291,6 @@ public class RideFragment extends Fragment {
 
         legalAreaPolygon = aMap.addPolygon(polygonOptions);
     }
-
-    private boolean isLocationInLegalArea(LatLng location) {
-        if (legalAreaPolygon != null) {
-            return AMapUtils.contains(location, legalAreaPolygon);
-        }
-        return false;
-    }
-
-
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -134,6 +324,7 @@ public class RideFragment extends Fragment {
 
         // 初始化按钮和文本视图
         statusText = view.findViewById(R.id.status_text);
+        statusText.setVisibility(View.GONE);
         Button scanButton = view.findViewById(R.id.scan_button);
         Button disconnectButton = view.findViewById(R.id.disconnect_button);
         Button repairButton = view.findViewById(R.id.repair_button);
@@ -147,7 +338,7 @@ public class RideFragment extends Fragment {
         // 设置报修按钮的点击事件
         repairButton.setOnClickListener(v -> {
             // 实现报修功能
-            Toast.makeText(getContext(), "报修功能待实现", Toast.LENGTH_SHORT).show();
+            showRepairDialog();
         });
 
         // 检查并请求所需的权限
@@ -209,6 +400,11 @@ public class RideFragment extends Fragment {
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         IntentResult result = IntentIntegrator.parseActivityResult(requestCode, resultCode, data);
+
+        if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == getActivity().RESULT_OK) {
+            // 上传图片并获取 URL
+            uploadImage(photoURI);
+        }
         if (result != null) {
             if (result.getContents() == null) {
                 Toast.makeText(getContext(), "取消扫描", Toast.LENGTH_LONG).show();
@@ -429,6 +625,12 @@ public class RideFragment extends Fragment {
 
             // 调整地图中心位置到最新位置
             aMap.moveCamera(com.amap.api.maps2d.CameraUpdateFactory.newLatLng(latLng));
+
+            // 计算并更新总距离
+            if (ridePathPoints.size() > 1) {
+                LatLng previousPoint = ridePathPoints.get(ridePathPoints.size() - 2);
+                totalDistance += AMapUtils.calculateLineDistance(previousPoint, latLng);
+            }
         } catch (Exception e) {
             Log.e(TAG, "解析蓝牙数据时发生错误: " + e.getMessage());
         }
@@ -460,6 +662,8 @@ public class RideFragment extends Fragment {
         AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
         builder.setTitle("骑行轨迹");
         builder.setMessage("展示骑行轨迹动画");
+        builder.setMessage("本次骑行里程: " + totalDistance + " 米\n展示骑行轨迹动画");
+
 
         builder.setPositiveButton("确定", (dialog, which) -> {
             // 动画展示轨迹
